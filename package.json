@@ -5,12 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "mocha-webpack --webpack-config webpack.config-test.js \"tests/index.js\"",
-    "start": "node server.js"
+    "start": "node server.js",
+    "start-https": "webpack-dev-server -d --hot --https --config webpack.config.js"
   },
   "author": "@Masyaka",
   "license": "ISC",
   "dependencies": {
     "@material-ui/core": "^1.2.0",
+    "@material-ui/icons": "^1.1.0",
     "babel-core": "^6.24.1",
     "babel-loader": "^7.0.0",
     "babel-polyfill": "^6.26.0",
@@ -34,6 +36,7 @@
     "react-router": "^4.3.1",
     "react-router-dom": "^4.3.1",
     "react-router-redux": "^4.0.8",
+    "recorderjs": "^1.0.1",
     "redux": "^4.0.0",
     "redux-logger": "^3.0.6",
     "redux-saga": "^0.16.0",
@@ -44,6 +47,7 @@
     "webpack-node-externals": "^1.7.2"
   },
   "devDependencies": {
+    "copy-webpack-plugin": "^4.5.1",
     "redux-devtools": "^3.4.1",
     "webpack-cli": "^2.1.4"
   }

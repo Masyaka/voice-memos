@@ -1,6 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CleanWebpackPlugin = require('clean-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: path.join(__dirname, 'src', 'index.js'),
@@ -37,10 +37,12 @@ module.exports = {
     ]
   },
   plugins: [
-    new CleanWebpackPlugin(['dist']),
     new HtmlWebpackPlugin({
       title: 'Title',
       template: path.join(__dirname, 'src', 'index.html')
-    })
+    }),
+    new CopyWebpackPlugin([
+      { from: path.join(__dirname, 'node_modules', 'recorderjs', 'recorderWorker.js'), to: path.join(__dirname, 'dist', 'recorderWorker.js') },
+    ])
   ],
 };
