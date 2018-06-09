@@ -12,10 +12,10 @@ const sagaMiddleware = createSagaMiddleware();
 const store = createStore(
   combineReducers({
     ...reducers,
-    routing: routerReducer
+    routing: routerReducer,
   }),
+  applyMiddleware(sagaMiddleware),
   applyMiddleware(logger),
-  applyMiddleware(sagaMiddleware)
 );
 
 // then run the saga

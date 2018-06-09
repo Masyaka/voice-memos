@@ -2,7 +2,7 @@ function getRegularReducers() {
   const req = require.context(
     './bundles',
     true,
-    /^\.\/[a-z]+\/reducers\/([a-z]+)\.js$/i
+    /^\.\/[a-z-]+\/reducers\/([a-z-]+)\.js$/i,
   );
 
   return req
@@ -14,7 +14,7 @@ function getReducers() {
   return []
     .concat(getRegularReducers())
     .reduce((acc, [key, reducer]) => {
-      const name = /^\.\/[a-z]+\/reducers\/([a-z]+)\.js$/i.exec(key)[1];
+      const name = /^\.\/[a-z-]+\/reducers\/([a-z-]+)\.js$/i.exec(key)[1];
 
       if (acc[name]) {
         throw new Error(`Reducer "${name}" already exists, see "${key}"`);
