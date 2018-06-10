@@ -37,6 +37,7 @@ const styles = theme => ({
   secondaryHeading: {
     fontSize: theme.typography.pxToRem(15),
     color: theme.palette.text.secondary,
+    flexShrink: 0,
   },
 });
 
@@ -82,6 +83,7 @@ export class MainPage extends React.Component {
       );
 
       this.player = new Audio();
+      document.body.appendChild(this.player);
     } catch (e) {
       log('No web audio support in this browser!');
     }
@@ -89,6 +91,7 @@ export class MainPage extends React.Component {
 
   componentWillUnmount() {
     this.state.recorder.clear();
+    document.body.removeChild(this.player)
   }
 
   /**
@@ -117,12 +120,18 @@ export class MainPage extends React.Component {
   };
 
   playVoiceMemo = (vm) => {
-    this.props.dispatch(actions.playVoiceMemo(vm));
-    this.player.onended = () => {
-      this.props.dispatch(actions.stopVoiceMemo(vm));
-    };
-    this.player.src = vm.audioSource;
-    this.player.play();
+    try {
+      this.props.dispatch(actions.playVoiceMemo(vm));
+      this.player.onended = () => {
+        this.props.dispatch(actions.stopVoiceMemo(vm));
+        log(vm.name + ' stopped');
+      };
+      this.player.src = vm.audioSource;
+      this.player.play();
+      log('playing ' + vm.name);
+    } catch (e){
+      log('cant play ' + vm.name + ': ' + e.message);
+    }
   };
 
   onDelete = (vm) => {
@@ -150,8 +159,11 @@ export class MainPage extends React.Component {
                 color: vm === activeVoiceMemo && 'white',
               }}
             >
-              <ExpansionPanelSummary
-                expandIcon={
+              <ExpansionPanelSummary>
+                <Typography className={classes.secondaryHeading}>{vm.createdAt.toLocaleTimeString() + ' ' + vm.createdAt.toLocaleDateString()}</Typography>
+                <Typography className={classes.heading}>{vm.name}</Typography>
+                <Typography className={classes.secondaryHeading}>{secondsToTimeString(Math.ceil(vm.length))}</Typography>
+                <div className={classes.secondaryHeading}>
                   <DeleteIcon
                     onClick={(e) => {
                       e.stopPropagation();
@@ -160,11 +172,7 @@ export class MainPage extends React.Component {
                     color="secondary"
                     aria-label="delete"
                   />
-                }
-              >
-                <Typography className={classes.secondaryHeading}>{vm.createdAt.toLocaleTimeString() + ' ' + vm.createdAt.toLocaleDateString()}</Typography>
-                <Typography className={classes.heading}>{vm.name}</Typography>
-                <Typography className={classes.secondaryHeading}>{secondsToTimeString(Math.ceil(vm.length))}</Typography>
+                </div>
               </ExpansionPanelSummary>
               <ExpansionPanelDetails>
                 {isActive && <VoiceMemoProgress player={this.player} style={{ width: '100%' }}/>}
