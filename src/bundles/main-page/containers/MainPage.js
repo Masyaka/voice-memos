@@ -1,7 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import Recorder from 'recorderjs';
 
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
@@ -16,6 +15,7 @@ import * as Colors from '@material-ui/core/colors';
 import actions from '../actions/main-page';
 import VoiceMemoProgress from '../components/VoiceMemoProgress';
 import { secondsToTimeString } from '../../../utils/time';
+import Recorder from '../../../utils/recorder';
 
 const log = (msg) => {
   const node = document.createElement('p');
