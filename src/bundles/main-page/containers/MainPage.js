@@ -74,8 +74,8 @@ export class MainPage extends React.Component {
       navigator.getUserMedia(
         { audio: true, video: false },
         (stream) => {
-          const audioContext = new AudioContext();
-          const input = audioContext.createMediaStreamSource(stream);
+          this.audioContext = new AudioContext();
+          const input = this.audioContext.createMediaStreamSource(stream);
           this.setState({ recorder: new Recorder(input) });
           log('recorder initialized');
         },
@@ -99,8 +99,14 @@ export class MainPage extends React.Component {
    */
   player;
 
+  /**
+   * {AudioContext}
+   */
+  audioContext;
+
   onRecordStart = () => {
     this.state.recorder.record();
+    log('recorder started');
   };
 
   onRecordEnd = () => {
@@ -109,6 +115,7 @@ export class MainPage extends React.Component {
     this.state.recorder.exportWAV((blob) => {
       const url = URL.createObjectURL(blob);
       const now = new Date();
+      log('blob.size = ' + blob.size);
       this.props.dispatch(actions.putVoiceMemo({
         audioSource: url,
         name: 'Voice memo at: ' + now.toLocaleDateString(),
