@@ -41,8 +41,5 @@ module.exports = {
       title: 'Title',
       template: path.join(__dirname, 'src', 'index.html')
     }),
-    new CopyWebpackPlugin([
-      { from: path.join(__dirname, 'node_modules', 'recorderjs', 'recorderWorker.js'), to: path.join(__dirname, 'dist', 'recorderWorker.js') },
-    ])
   ],
 };
