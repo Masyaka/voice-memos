@@ -18,6 +18,8 @@ import VoiceMemoProgress from '../components/VoiceMemoProgress';
 import { secondsToTimeString } from '../../../utils/time';
 import Recorder from '../../../utils/recorder';
 
+const activeColor = Colors.purple[400];
+
 const log = (msg) => {
   const node = document.createElement('p');
   node.innerText = msg;
@@ -32,7 +34,7 @@ const styles = theme => ({
     fontSize: theme.typography.pxToRem(15),
     paddingLeft: 16,
     paddingRight: 16,
-    flexShrink: 0,
+    flexShrink: 1,
     flexGrow: 1,
   },
   secondaryHeading: {
@@ -77,9 +79,8 @@ export class MainPage extends React.Component {
         { audio: true, video: false },
         (stream) => {
           this.audioContext = new AudioContext();
-          const input = this.audioContext.createMediaStreamSource(stream);
-          this.setState({ recorder: new Recorder(input, { onAudioProcess: this.onAudioProcess }) });
-          log('recorder initialized');
+          this.mediaStreamSource = this.audioContext.createMediaStreamSource(stream);
+          this.setState({ recorder: new Recorder(this.mediaStreamSource) });
         },
         error => log(error),
       );
@@ -89,11 +90,6 @@ export class MainPage extends React.Component {
     } catch (e) {
       log('No web audio support in this browser!');
     }
-  }
-
-  componentWillUnmount() {
-    this.state.recorder.clear();
-    document.body.removeChild(this.player)
   }
 
   /**
@@ -106,23 +102,84 @@ export class MainPage extends React.Component {
    */
   audioContext;
 
-  onAudioProcess(e){
+  /**
+   * {Canvas}
+   */
+  inputCanvas;
 
+  /**
+   * number
+   */
+  analyzedUpdateLoop;
+
+  componentWillMount(){
   }
+
+  componentWillUnmount() {
+    this.state.recorder.clear();
+    document.body.removeChild(this.player);
+    cancelAnimationFrame(this.analyzedUpdateLoop);
+  }
+
+  initAnalyzer = (audioContext) => {
+    const analyser = audioContext.createAnalyser();
+    this.mediaStreamSource.connect(analyser);
+
+    analyser.fftSize = 128;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    this.inputCanvas.width = window.innerWidth / 2;
+    this.inputCanvas.height = window.innerHeight / 4;
+    const canvasCtx = this.inputCanvas.getContext("2d");
+
+    const draw = () => {
+      if(!this.inputCanvas) return;
+
+      this.analyzedUpdateLoop = requestAnimationFrame(draw);
+
+      analyser.getByteTimeDomainData(dataArray);
+      canvasCtx.clearRect(0, 0, this.inputCanvas.width, this.inputCanvas.height);
+
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeStyle = activeColor;
+
+      canvasCtx.beginPath();
+
+      const sliceWidth = this.inputCanvas.width * 1.0 / bufferLength;
+      let x = 0;
+
+      for(let i = 0; i < bufferLength; i++) {
+
+        const v = dataArray[i] / 128.0;
+        const y = v * this.inputCanvas.height/2;
+
+        if(i === 0) {
+          canvasCtx.moveTo(x, y);
+        } else {
+          canvasCtx.lineTo(x, y);
+        }
+
+        x += sliceWidth;
+      }
+
+      canvasCtx.lineTo(this.inputCanvas.width, this.inputCanvas.height/2);
+      canvasCtx.stroke();
+    };
+
+    draw();
+  };
 
   onRecordStart = () => {
     this.setState({ isRecording: true });
     this.state.recorder.record();
-    log('recorder started');
+    this.initAnalyzer(this.audioContext);
   };
 
   onRecordEnd = () => {
     this.state.recorder.stop();
-    log('recorder stopped');
     this.state.recorder.exportWAV((blob) => {
       const url = URL.createObjectURL(blob);
       const now = new Date();
-      log('blob.size = ' + blob.size);
       this.props.dispatch(actions.putVoiceMemo({
         audioSource: url,
         name: 'Voice memo at: ' + now.toLocaleDateString(),
@@ -131,7 +188,12 @@ export class MainPage extends React.Component {
       }));
       this.state.recorder.clear();
     });
-    this.setState({ isRecording: false })
+    this.setState({ isRecording: false });
+
+    // stop redrawing and clear visualization
+    cancelAnimationFrame(this.analyzedUpdateLoop);
+    const canvasCtx = this.inputCanvas.getContext("2d");
+    canvasCtx.clearRect(0, 0, this.inputCanvas.width, this.inputCanvas.height);
   };
 
   playVoiceMemo = (vm) => {
@@ -139,13 +201,22 @@ export class MainPage extends React.Component {
       this.props.dispatch(actions.playVoiceMemo(vm));
       this.player.onended = () => {
         this.props.dispatch(actions.stopVoiceMemo(vm));
-        log(vm.name + ' stopped');
       };
       this.player.src = vm.audioSource;
       this.player.play();
-      log('playing ' + vm.name);
     } catch (e){
-      log('cant play ' + vm.name + ': ' + e.message);
+      log('Cant play ' + vm.name + ': ' + e.message);
+    }
+  };
+
+  stopVoiceMemo = () => {
+    try {
+      if(this.props.activeVoiceMemo){
+        this.props.dispatch(actions.stopVoiceMemo(this.props.activeVoiceMemo));
+        this.player.pause();
+      }
+    } catch (e){
+      log('Cant stop ' + vm.name + ': ' + e.message);
     }
   };
 
@@ -159,25 +230,36 @@ export class MainPage extends React.Component {
       activeVoiceMemo,
       classes
     } = this.props;
+
     return (
       <div>
         {voiceMemos.map((vm) => {
           const isActive = vm === activeVoiceMemo;
 
+          const typographyStyle = {
+            color: vm === activeVoiceMemo && 'white',
+          };
+
           return (
             <ExpansionPanel
               key={vm.createdAt.toUTCString()}
               expanded={isActive}
-              onClick={() => this.playVoiceMemo(vm)}
+              onClick={() => isActive ? this.stopVoiceMemo() : this.playVoiceMemo(vm)}
               style={{
-                backgroundColor: vm === activeVoiceMemo && Colors.purple[400],
-                color: vm === activeVoiceMemo && 'white',
+                backgroundColor: vm === activeVoiceMemo && activeColor,
               }}
             >
               <ExpansionPanelSummary>
-                <Typography className={classes.secondaryHeading}>{vm.createdAt.toLocaleTimeString() + ' ' + vm.createdAt.toLocaleDateString()}</Typography>
-                <Typography className={classes.heading}>{vm.name}</Typography>
-                <Typography className={classes.secondaryHeading}>{secondsToTimeString(Math.ceil(vm.length))}</Typography>
+                <Typography style={typographyStyle} className={classes.secondaryHeading}>
+                  {vm.createdAt.toLocaleDateString()} <br/>
+                  {vm.createdAt.toLocaleTimeString()}
+                </Typography>
+                <Typography style={typographyStyle} className={classes.heading}>
+                  {vm.name}
+                </Typography>
+                <Typography style={typographyStyle} className={classes.secondaryHeading}>
+                  {secondsToTimeString(Math.ceil(vm.length))}
+                </Typography>
                 <div className={classes.secondaryHeading}>
                   <DeleteIcon
                     onClick={(e) => {
@@ -200,11 +282,29 @@ export class MainPage extends React.Component {
           variant="fab"
           color="primary"
           aria-label="record"
-          style={{ position: 'fixed', right: 16, bottom: 16 }}
+          style={{
+            height: 64,
+            width: 64,
+            position: 'fixed',
+            right: 16,
+            bottom: 16,
+            backgroundColor: this.state.isRecording && activeColor
+          }}
           onClick={ this.state.isRecording ? this.onRecordEnd : this.onRecordStart}
         >
           {this.state.isRecording ? <StopIcon /> : <RecordIcon />}
         </Button>
+        <canvas
+          style={{
+            pointerEvents: 'none',
+            position: 'fixed',
+            height: '100%',
+            width: '100%',
+            top: 0,
+            zIndex: 100
+          }}
+          ref={element => this.inputCanvas = element}
+        />
       </div>
     );
   }

@@ -26,7 +26,7 @@ export class Recorder {
    *  numChannels?: {number},
    *  mimeType?: {string},
    *  onAudioProcess?: {function},
-   * }} cfg
+   * } = undefined} cfg
    */
   constructor(source, cfg) {
     Object.assign(this.config, cfg);
