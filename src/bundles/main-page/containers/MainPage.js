@@ -5,6 +5,7 @@ import { connect } from 'react-redux';
 import { withStyles } from '@material-ui/core/styles';
 import Button from '@material-ui/core/Button';
 import RecordIcon from '@material-ui/icons/Mic';
+import StopIcon from '@material-ui/icons/Stop';
 import DeleteIcon from '@material-ui/icons/Delete';
 import Typography from '@material-ui/core/Typography';
 import ExpansionPanel from '@material-ui/core/ExpansionPanel';
@@ -61,6 +62,7 @@ export class MainPage extends React.Component {
        * {Recorder}
        */
       recorder: null,
+      isRecording: false,
     };
 
     try {
@@ -76,7 +78,7 @@ export class MainPage extends React.Component {
         (stream) => {
           this.audioContext = new AudioContext();
           const input = this.audioContext.createMediaStreamSource(stream);
-          this.setState({ recorder: new Recorder(input) });
+          this.setState({ recorder: new Recorder(input, { onAudioProcess: this.onAudioProcess }) });
           log('recorder initialized');
         },
         error => log(error),
@@ -104,7 +106,12 @@ export class MainPage extends React.Component {
    */
   audioContext;
 
+  onAudioProcess(e){
+
+  }
+
   onRecordStart = () => {
+    this.setState({ isRecording: true });
     this.state.recorder.record();
     log('recorder started');
   };
@@ -120,10 +127,11 @@ export class MainPage extends React.Component {
         audioSource: url,
         name: 'Voice memo at: ' + now.toLocaleDateString(),
         createdAt: now,
-        length: (blob.size / this.state.recorder.context.sampleRate) / 8,
+        length: (blob.size / this.state.recorder.context.sampleRate) / this.state.recorder.config.numChannels,
       }));
       this.state.recorder.clear();
     });
+    this.setState({ isRecording: false })
   };
 
   playVoiceMemo = (vm) => {
@@ -193,10 +201,9 @@ export class MainPage extends React.Component {
           color="primary"
           aria-label="record"
           style={{ position: 'fixed', right: 16, bottom: 16 }}
-          onMouseDown={this.onRecordStart}
-          onMouseUp={this.onRecordEnd}
+          onClick={ this.state.isRecording ? this.onRecordEnd : this.onRecordStart}
         >
-          <RecordIcon />
+          {this.state.isRecording ? <StopIcon /> : <RecordIcon />}
         </Button>
       </div>
     );

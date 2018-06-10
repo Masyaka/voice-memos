@@ -1,5 +1,5 @@
 /**
- * source code copied from https://github.com/mattdiamond/Recorderjs/blob/master/src/recorder.js
+ * source code based on https://github.com/mattdiamond/Recorderjs/blob/master/src/recorder.js
  */
 import InlineWorker from 'inline-worker';
 
@@ -7,7 +7,8 @@ export class Recorder {
   config = {
     bufferLen: 4096,
     numChannels: 2,
-    mimeType: 'audio/wav'
+    mimeType: 'audio/wav',
+    onAudioProcess: null,
   };
 
   recording = false;
@@ -17,6 +18,16 @@ export class Recorder {
     exportWAV: []
   };
 
+  /**
+   *
+   * @param source
+   * @param {{
+   *  bufferLen?: {number},
+   *  numChannels?: {number},
+   *  mimeType?: {string},
+   *  onAudioProcess?: {function},
+   * }} cfg
+   */
   constructor(source, cfg) {
     Object.assign(this.config, cfg);
     this.context = source.context;
@@ -31,6 +42,11 @@ export class Recorder {
       for (var channel = 0; channel < this.config.numChannels; channel++) {
         buffer.push(e.inputBuffer.getChannelData(channel));
       }
+
+      if(this.config.onAudioProcess){
+        this.config.onAudioProcess(e)
+      }
+
       this.worker.postMessage({
         command: 'record',
         buffer: buffer
